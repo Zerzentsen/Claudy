@@ -6,6 +6,7 @@ import type { Trip, DayPlan, Activity, Place } from '../types.ts'
 import { ACTIVITY_CATEGORIES } from '../types.ts'
 import type { ActivityCategory } from '../types.ts'
 import * as storage from '../storage.ts'
+import ConfirmModal from './ConfirmModal.tsx'
 
 interface Props {
   trip: Trip
@@ -47,6 +48,29 @@ export default function Itinerary({ trip, days, places, onUpdate }: Props) {
   )
 }
 
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number)
+  return h * 60 + m
+}
+
+function detectConflicts(activities: Activity[], currentId?: string): string[] {
+  const timed = activities
+    .filter((a) => a.startTime && a.endTime && a.id !== currentId)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+
+  const conflicts: string[] = []
+  for (let i = 0; i < timed.length; i++) {
+    for (let j = i + 1; j < timed.length; j++) {
+      const a = timed[i]
+      const b = timed[j]
+      if (timeToMinutes(a.endTime) > timeToMinutes(b.startTime)) {
+        conflicts.push(`"${a.title}" (${a.startTime}-${a.endTime}) chevauche "${b.title}" (${b.startTime}-${b.endTime})`)
+      }
+    }
+  }
+  return conflicts
+}
+
 function DayCard({
   date,
   dayNumber,
@@ -66,9 +90,11 @@ function DayCard({
   const [showForm, setShowForm] = useState(false)
   const [notes, setNotes] = useState(dayPlan?.notes ?? '')
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   const activities = dayPlan?.activities ?? []
   const dateStr = format(date, 'yyyy-MM-dd')
+  const conflicts = detectConflicts(activities)
 
   function ensureDayPlan(): DayPlan {
     if (dayPlan) return dayPlan
@@ -110,6 +136,7 @@ function DayCard({
     const updated = dayPlan.activities.filter((a) => a.id !== activityId)
     storage.saveDay({ ...dayPlan, activities: updated })
     onUpdate()
+    setDeleteConfirm(null)
   }
 
   return (
@@ -128,6 +155,9 @@ function DayCard({
             </p>
             <p className="text-sm text-slate-500">
               {activities.length} activité{activities.length !== 1 ? 's' : ''}
+              {conflicts.length > 0 && (
+                <span className="ml-2 text-amber-600">⚠ {conflicts.length} conflit{conflicts.length !== 1 ? 's' : ''}</span>
+              )}
             </p>
           </div>
         </div>
@@ -140,6 +170,16 @@ function DayCard({
 
       {expanded && (
         <div className="border-t border-slate-100 p-4 space-y-4">
+          {/* Conflict warnings */}
+          {conflicts.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-sm font-medium text-amber-800 mb-1">Chevauchements horaires :</p>
+              {conflicts.map((c, i) => (
+                <p key={i} className="text-xs text-amber-700">{c}</p>
+              ))}
+            </div>
+          )}
+
           {/* Notes */}
           <div>
             <label className="block text-sm font-medium text-slate-600 mb-1">
@@ -203,7 +243,7 @@ function DayCard({
                     Modifier
                   </button>
                   <button
-                    onClick={() => handleDeleteActivity(activity.id)}
+                    onClick={() => setDeleteConfirm(activity.id)}
                     className="text-xs px-2 py-1 text-red-500 hover:bg-red-50 rounded cursor-pointer"
                   >
                     Supprimer
@@ -215,6 +255,7 @@ function DayCard({
           {showForm ? (
             <ActivityForm
               activity={editingActivity}
+              existingActivities={activities}
               places={places}
               onSave={handleSaveActivity}
               onCancel={() => {
@@ -230,6 +271,15 @@ function DayCard({
               + Ajouter une activité
             </button>
           )}
+
+          {deleteConfirm && (
+            <ConfirmModal
+              title="Supprimer l'activité"
+              message="Voulez-vous vraiment supprimer cette activité ?"
+              onConfirm={() => handleDeleteActivity(deleteConfirm)}
+              onCancel={() => setDeleteConfirm(null)}
+            />
+          )}
         </div>
       )}
     </div>
@@ -238,11 +288,13 @@ function DayCard({
 
 function ActivityForm({
   activity,
+  existingActivities,
   places,
   onSave,
   onCancel,
 }: {
   activity: Activity | null
+  existingActivities: Activity[]
   places: Place[]
   onSave: (a: Activity) => void
   onCancel: () => void
@@ -253,9 +305,32 @@ function ActivityForm({
   const [endTime, setEndTime] = useState(activity?.endTime ?? '')
   const [category, setCategory] = useState<ActivityCategory>(activity?.category ?? 'activity')
   const [placeId, setPlaceId] = useState(activity?.placeId ?? '')
+  const [timeError, setTimeError] = useState('')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    if (startTime && endTime && endTime <= startTime) {
+      setTimeError("L'heure de fin doit être après l'heure de début")
+      return
+    }
+
+    if (startTime && endTime) {
+      const newActivity = { id: activity?.id ?? '', startTime, endTime, title } as Activity
+      const others = existingActivities.filter((a) => a.id !== newActivity.id && a.startTime && a.endTime)
+      for (const other of others) {
+        const newStart = timeToMinutes(startTime)
+        const newEnd = timeToMinutes(endTime)
+        const otherStart = timeToMinutes(other.startTime)
+        const otherEnd = timeToMinutes(other.endTime)
+        if (newStart < otherEnd && newEnd > otherStart) {
+          setTimeError(`Chevauche "${other.title}" (${other.startTime}-${other.endTime})`)
+          return
+        }
+      }
+    }
+
+    setTimeError('')
     onSave({
       id: activity?.id ?? uuidv4(),
       title,
@@ -312,18 +387,31 @@ function ActivityForm({
           <input
             type="time"
             value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            onChange={(e) => {
+              setStartTime(e.target.value)
+              setTimeError('')
+            }}
+            className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+              timeError ? 'border-red-300' : 'border-slate-200'
+            }`}
           />
         </div>
         <div>
           <input
             type="time"
             value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            onChange={(e) => {
+              setEndTime(e.target.value)
+              setTimeError('')
+            }}
+            className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+              timeError ? 'border-red-300' : 'border-slate-200'
+            }`}
           />
         </div>
+        {timeError && (
+          <p className="col-span-2 text-xs text-red-600">{timeError}</p>
+        )}
         <div className="col-span-2">
           <textarea
             value={description}

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import type { Place, DayPlan } from '../types.ts'
@@ -13,14 +13,19 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
+const iconCache = new Map<string, L.DivIcon>()
+
 function createCategoryIcon(emoji: string) {
-  return L.divIcon({
+  if (iconCache.has(emoji)) return iconCache.get(emoji)!
+  const icon = L.divIcon({
     html: `<div style="font-size:24px;text-align:center;line-height:32px;">${emoji}</div>`,
     className: '',
     iconSize: [32, 32],
     iconAnchor: [16, 32],
     popupAnchor: [0, -32],
   })
+  iconCache.set(emoji, icon)
+  return icon
 }
 
 interface Props {
@@ -41,23 +46,28 @@ function FitBounds({ places }: { places: Place[] }) {
 }
 
 export default function TripMap({ places, days }: Props) {
-  const placesWithCoords = places.filter((p) => p.lat !== 0 && p.lng !== 0)
+  const placesWithCoords = useMemo(
+    () => places.filter((p) => p.lat !== 0 && p.lng !== 0),
+    [places]
+  )
 
-  // Build route from day activities that reference places
-  const routePoints: [number, number][] = []
-  for (const day of days) {
-    for (const activity of day.activities.sort((a, b) => {
-      if (a.startTime && b.startTime) return a.startTime.localeCompare(b.startTime)
-      return a.order - b.order
-    })) {
-      if (activity.placeId) {
-        const place = places.find((p) => p.id === activity.placeId)
-        if (place && place.lat !== 0 && place.lng !== 0) {
-          routePoints.push([place.lat, place.lng])
+  const routePoints = useMemo(() => {
+    const points: [number, number][] = []
+    for (const day of days) {
+      for (const activity of day.activities.sort((a, b) => {
+        if (a.startTime && b.startTime) return a.startTime.localeCompare(b.startTime)
+        return a.order - b.order
+      })) {
+        if (activity.placeId) {
+          const place = places.find((p) => p.id === activity.placeId)
+          if (place && place.lat !== 0 && place.lng !== 0) {
+            points.push([place.lat, place.lng])
+          }
         }
       }
     }
-  }
+    return points
+  }, [days, places])
 
   if (placesWithCoords.length === 0) {
     return (

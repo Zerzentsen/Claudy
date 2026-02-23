@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
 import { format, differenceInDays } from 'date-fns'
@@ -6,21 +6,20 @@ import { fr } from 'date-fns/locale'
 import type { Trip } from '../types.ts'
 import { CURRENCIES } from '../types.ts'
 import * as storage from '../storage.ts'
+import ConfirmModal from '../components/ConfirmModal.tsx'
 
 export default function Dashboard() {
-  const [trips, setTrips] = useState<Trip[]>([])
+  const [trips, setTrips] = useState<Trip[]>(() => storage.getTrips())
   const [showModal, setShowModal] = useState(false)
   const [editTrip, setEditTrip] = useState<Trip | null>(null)
   const [importError, setImportError] = useState('')
-
-  useEffect(() => {
-    setTrips(storage.getTrips())
-  }, [])
+  const [importSuccess, setImportSuccess] = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   function handleDelete(id: string) {
-    if (!confirm('Supprimer ce voyage et toutes ses données ?')) return
     storage.deleteTrip(id)
     setTrips(storage.getTrips())
+    setDeleteConfirm(null)
   }
 
   function handleSave(trip: Trip) {
@@ -37,15 +36,19 @@ export default function Dashboard() {
     reader.onload = (ev) => {
       try {
         const data = JSON.parse(ev.target?.result as string)
-        if (!data.trip || !data.days || !data.places || !data.expenses) {
-          setImportError('Fichier JSON invalide')
+        const result = storage.importTripData(data)
+        if (!result.success) {
+          setImportError(result.error)
+          setImportSuccess('')
           return
         }
-        storage.importTripData(data)
         setTrips(storage.getTrips())
         setImportError('')
+        setImportSuccess(`Voyage "${data.trip.name}" importé avec succès`)
+        setTimeout(() => setImportSuccess(''), 4000)
       } catch {
         setImportError('Erreur lors de la lecture du fichier')
+        setImportSuccess('')
       }
     }
     reader.readAsText(file)
@@ -88,17 +91,43 @@ export default function Dashboard() {
       </div>
 
       {importError && (
-        <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">{importError}</div>
+        <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm flex items-center justify-between">
+          <span>{importError}</span>
+          <button onClick={() => setImportError('')} className="text-red-500 hover:text-red-700 cursor-pointer text-xs">Fermer</button>
+        </div>
+      )}
+
+      {importSuccess && (
+        <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm">{importSuccess}</div>
+      )}
+
+      {trips.length === 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 p-16 text-center">
+          <p className="text-5xl mb-4">✈️</p>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Planifiez votre prochain voyage</h2>
+          <p className="text-slate-500 mb-6 max-w-md mx-auto">
+            Créez un voyage pour organiser votre itinéraire, vos lieux et votre budget au même endroit.
+          </p>
+          <button
+            onClick={() => {
+              setEditTrip(null)
+              setShowModal(true)
+            }}
+            className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors cursor-pointer"
+          >
+            + Créer mon premier voyage
+          </button>
+        </div>
       )}
 
       {ongoing.length > 0 && (
-        <TripSection title="En cours" trips={ongoing} onDelete={handleDelete} onEdit={(t) => { setEditTrip(t); setShowModal(true) }} />
+        <TripSection title="En cours" trips={ongoing} onDelete={(id) => setDeleteConfirm(id)} onEdit={(t) => { setEditTrip(t); setShowModal(true) }} />
       )}
       {upcoming.length > 0 && (
-        <TripSection title="A venir" trips={upcoming} onDelete={handleDelete} onEdit={(t) => { setEditTrip(t); setShowModal(true) }} />
+        <TripSection title="A venir" trips={upcoming} onDelete={(id) => setDeleteConfirm(id)} onEdit={(t) => { setEditTrip(t); setShowModal(true) }} />
       )}
       {past.length > 0 && (
-        <TripSection title="Passés" trips={past} onDelete={handleDelete} onEdit={(t) => { setEditTrip(t); setShowModal(true) }} />
+        <TripSection title="Passés" trips={past} onDelete={(id) => setDeleteConfirm(id)} onEdit={(t) => { setEditTrip(t); setShowModal(true) }} />
       )}
 
       {showModal && (
@@ -109,6 +138,15 @@ export default function Dashboard() {
             setShowModal(false)
             setEditTrip(null)
           }}
+        />
+      )}
+
+      {deleteConfirm && (
+        <ConfirmModal
+          title="Supprimer le voyage"
+          message="Voulez-vous vraiment supprimer ce voyage et toutes ses données (itinéraire, lieux, budget) ?"
+          onConfirm={() => handleDelete(deleteConfirm)}
+          onCancel={() => setDeleteConfirm(null)}
         />
       )}
     </div>

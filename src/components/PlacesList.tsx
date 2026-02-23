@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import type { Place, PlaceCategory } from '../types.ts'
 import { PLACE_CATEGORIES } from '../types.ts'
 import * as storage from '../storage.ts'
+import ConfirmModal from './ConfirmModal.tsx'
 
 interface Props {
   tripId: string
@@ -14,6 +15,7 @@ export default function PlacesList({ tripId, places, onUpdate }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [editPlace, setEditPlace] = useState<Place | null>(null)
   const [filterCat, setFilterCat] = useState<PlaceCategory | ''>('')
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   const filtered = filterCat ? places.filter((p) => p.category === filterCat) : places
 
@@ -25,9 +27,9 @@ export default function PlacesList({ tripId, places, onUpdate }: Props) {
   }
 
   function handleDelete(id: string) {
-    if (!confirm('Supprimer ce lieu ?')) return
     storage.deletePlace(id)
     onUpdate()
+    setDeleteConfirm(null)
   }
 
   return (
@@ -122,7 +124,7 @@ export default function PlacesList({ tripId, places, onUpdate }: Props) {
                     Modifier
                   </button>
                   <button
-                    onClick={() => handleDelete(place.id)}
+                    onClick={() => setDeleteConfirm(place.id)}
                     className="text-xs px-3 py-1 text-red-500 hover:bg-red-50 rounded cursor-pointer"
                   >
                     Supprimer
@@ -143,6 +145,15 @@ export default function PlacesList({ tripId, places, onUpdate }: Props) {
             setShowForm(false)
             setEditPlace(null)
           }}
+        />
+      )}
+
+      {deleteConfirm && (
+        <ConfirmModal
+          title="Supprimer le lieu"
+          message="Voulez-vous vraiment supprimer ce lieu ?"
+          onConfirm={() => handleDelete(deleteConfirm)}
+          onCancel={() => setDeleteConfirm(null)}
         />
       )}
     </div>
@@ -168,9 +179,35 @@ function PlaceForm({
   const [notes, setNotes] = useState(place?.notes ?? '')
   const [phone, setPhone] = useState(place?.phone ?? '')
   const [website, setWebsite] = useState(place?.website ?? '')
+  const [coordError, setCoordError] = useState('')
+
+  function validateCoords(latVal: string, lngVal: string): boolean {
+    if (!latVal && !lngVal) return true
+    const latNum = parseFloat(latVal)
+    const lngNum = parseFloat(lngVal)
+    if (latVal && !lngVal) {
+      setCoordError('Longitude requise si la latitude est renseignée')
+      return false
+    }
+    if (!latVal && lngVal) {
+      setCoordError('Latitude requise si la longitude est renseignée')
+      return false
+    }
+    if (isNaN(latNum) || latNum < -90 || latNum > 90) {
+      setCoordError('Latitude invalide (entre -90 et 90)')
+      return false
+    }
+    if (isNaN(lngNum) || lngNum < -180 || lngNum > 180) {
+      setCoordError('Longitude invalide (entre -180 et 180)')
+      return false
+    }
+    setCoordError('')
+    return true
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!validateCoords(lat, lng)) return
     onSave({
       id: place?.id ?? uuidv4(),
       tripId,
@@ -256,9 +293,14 @@ function PlaceForm({
                 type="number"
                 step="any"
                 value={lat}
-                onChange={(e) => setLat(e.target.value)}
+                onChange={(e) => {
+                  setLat(e.target.value)
+                  setCoordError('')
+                }}
                 placeholder="48.8566"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                  coordError ? 'border-red-300' : 'border-slate-300'
+                }`}
               />
             </div>
             <div>
@@ -267,11 +309,19 @@ function PlaceForm({
                 type="number"
                 step="any"
                 value={lng}
-                onChange={(e) => setLng(e.target.value)}
+                onChange={(e) => {
+                  setLng(e.target.value)
+                  setCoordError('')
+                }}
                 placeholder="2.3522"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                  coordError ? 'border-red-300' : 'border-slate-300'
+                }`}
               />
             </div>
+            {coordError && (
+              <p className="col-span-2 text-xs text-red-600">{coordError}</p>
+            )}
             <div className="col-span-2">
               <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
               <textarea

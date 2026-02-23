@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import type { Trip, Expense, DayPlan, ExpenseCategory } from '../types.ts'
 import { EXPENSE_CATEGORIES, CURRENCIES } from '../types.ts'
 import * as storage from '../storage.ts'
+import ConfirmModal from './ConfirmModal.tsx'
 
 interface Props {
   trip: Trip
@@ -14,42 +15,61 @@ interface Props {
 export default function Budget({ trip, expenses, days, onUpdate }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [editExpense, setEditExpense] = useState<Expense | null>(null)
+  const [filterCat, setFilterCat] = useState<ExpenseCategory | ''>('')
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   const currency = CURRENCIES.find((c) => c.code === trip.currency)
   const symbol = currency?.symbol ?? trip.currency
 
+  const filtered = filterCat ? expenses.filter((e) => e.category === filterCat) : expenses
   const total = expenses.reduce((sum, e) => sum + e.amount, 0)
+  const filteredTotal = filtered.reduce((sum, e) => sum + e.amount, 0)
   const byCategory = expenses.reduce<Record<string, number>>((acc, e) => {
     acc[e.category] = (acc[e.category] ?? 0) + e.amount
     return acc
   }, {})
 
   function handleSave(expense: Expense) {
-    storage.saveExpense(expense)
+    const matchingDay = days.find((d) => d.date === expense.date)
+    storage.saveExpense({ ...expense, dayId: matchingDay?.id ?? '' })
     onUpdate()
     setShowForm(false)
     setEditExpense(null)
   }
 
   function handleDelete(id: string) {
-    if (!confirm('Supprimer cette dépense ?')) return
     storage.deleteExpense(id)
     onUpdate()
+    setDeleteConfirm(null)
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-slate-800">Budget</h2>
-        <button
-          onClick={() => {
-            setEditExpense(null)
-            setShowForm(true)
-          }}
-          className="px-4 py-1.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 cursor-pointer"
-        >
-          + Ajouter une dépense
-        </button>
+        <div className="flex items-center gap-3">
+          <select
+            value={filterCat}
+            onChange={(e) => setFilterCat(e.target.value as ExpenseCategory | '')}
+            className="text-sm px-3 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">Toutes</option>
+            {Object.entries(EXPENSE_CATEGORIES).map(([key, val]) => (
+              <option key={key} value={key}>
+                {val.icon} {val.label}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => {
+              setEditExpense(null)
+              setShowForm(true)
+            }}
+            className="px-4 py-1.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 cursor-pointer"
+          >
+            + Ajouter une dépense
+          </button>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -100,9 +120,15 @@ export default function Budget({ trip, expenses, days, onUpdate }: Props) {
                 const info = EXPENSE_CATEGORIES[cat as ExpenseCategory]
                 const pct = total > 0 ? (amount / total) * 100 : 0
                 return (
-                  <div key={cat} className="flex items-center gap-3">
+                  <button
+                    key={cat}
+                    onClick={() => setFilterCat(filterCat === cat ? '' : cat as ExpenseCategory)}
+                    className={`w-full flex items-center gap-3 p-1 rounded-lg transition-colors cursor-pointer ${
+                      filterCat === cat ? 'bg-primary-50' : 'hover:bg-slate-50'
+                    }`}
+                  >
                     <span className="text-lg w-8 text-center">{info?.icon ?? '📌'}</span>
-                    <span className="text-sm text-slate-700 w-24">
+                    <span className="text-sm text-slate-700 w-24 text-left">
                       {info?.label ?? cat}
                     </span>
                     <div className="flex-1 bg-slate-100 rounded-full h-4 overflow-hidden">
@@ -117,18 +143,35 @@ export default function Budget({ trip, expenses, days, onUpdate }: Props) {
                     <span className="text-xs text-slate-400 w-12 text-right">
                       {pct.toFixed(0)}%
                     </span>
-                  </div>
+                  </button>
                 )
               })}
           </div>
         </div>
       )}
 
+      {/* Filtered indicator */}
+      {filterCat && (
+        <div className="flex items-center justify-between mb-4 px-3 py-2 bg-primary-50 rounded-lg">
+          <span className="text-sm text-primary-700">
+            {EXPENSE_CATEGORIES[filterCat].icon} {EXPENSE_CATEGORIES[filterCat].label} : {filtered.length} dépense{filtered.length !== 1 ? 's' : ''} — {filteredTotal.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {symbol}
+          </span>
+          <button
+            onClick={() => setFilterCat('')}
+            className="text-xs text-primary-600 hover:text-primary-800 cursor-pointer"
+          >
+            Effacer le filtre
+          </button>
+        </div>
+      )}
+
       {/* Expense list */}
-      {expenses.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
           <p className="text-4xl mb-3">💰</p>
-          <p className="text-slate-500">Aucune dépense enregistrée</p>
+          <p className="text-slate-500">
+            {filterCat ? 'Aucune dépense dans cette catégorie' : 'Aucune dépense enregistrée'}
+          </p>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -149,7 +192,7 @@ export default function Budget({ trip, expenses, days, onUpdate }: Props) {
               </tr>
             </thead>
             <tbody>
-              {expenses.map((expense) => {
+              {filtered.map((expense) => {
                 const cat = EXPENSE_CATEGORIES[expense.category]
                 return (
                   <tr
@@ -188,7 +231,7 @@ export default function Budget({ trip, expenses, days, onUpdate }: Props) {
                           ✏️
                         </button>
                         <button
-                          onClick={() => handleDelete(expense.id)}
+                          onClick={() => setDeleteConfirm(expense.id)}
                           className="text-xs px-2 py-1 text-red-500 hover:bg-red-50 rounded cursor-pointer"
                         >
                           🗑️
@@ -207,12 +250,23 @@ export default function Budget({ trip, expenses, days, onUpdate }: Props) {
         <ExpenseForm
           tripId={trip.id}
           currency={trip.currency}
+          tripStartDate={trip.startDate}
+          tripEndDate={trip.endDate}
           expense={editExpense}
           onSave={handleSave}
           onCancel={() => {
             setShowForm(false)
             setEditExpense(null)
           }}
+        />
+      )}
+
+      {deleteConfirm && (
+        <ConfirmModal
+          title="Supprimer la dépense"
+          message="Voulez-vous vraiment supprimer cette dépense ?"
+          onConfirm={() => handleDelete(deleteConfirm)}
+          onCancel={() => setDeleteConfirm(null)}
         />
       )}
     </div>
@@ -222,12 +276,16 @@ export default function Budget({ trip, expenses, days, onUpdate }: Props) {
 function ExpenseForm({
   tripId,
   currency,
+  tripStartDate,
+  tripEndDate,
   expense,
   onSave,
   onCancel,
 }: {
   tripId: string
   currency: string
+  tripStartDate: string
+  tripEndDate: string
   expense: Expense | null
   onSave: (e: Expense) => void
   onCancel: () => void
@@ -237,13 +295,23 @@ function ExpenseForm({
   const [category, setCategory] = useState<ExpenseCategory>(expense?.category ?? 'food')
   const [date, setDate] = useState(expense?.date ?? new Date().toISOString().split('T')[0])
   const [notes, setNotes] = useState(expense?.notes ?? '')
+  const [dateWarning, setDateWarning] = useState('')
+
+  function handleDateChange(newDate: string) {
+    setDate(newDate)
+    if (newDate < tripStartDate || newDate > tripEndDate) {
+      setDateWarning('Cette date est en dehors des dates du voyage')
+    } else {
+      setDateWarning('')
+    }
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     onSave({
       id: expense?.id ?? uuidv4(),
       tripId,
-      dayId: '',
+      dayId: expense?.dayId ?? '',
       title,
       amount: parseFloat(amount) || 0,
       currency,
@@ -307,9 +375,14 @@ function ExpenseForm({
             <input
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              onChange={(e) => handleDateChange(e.target.value)}
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                dateWarning ? 'border-amber-400' : 'border-slate-300'
+              }`}
             />
+            {dateWarning && (
+              <p className="text-xs text-amber-600 mt-1">{dateWarning}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>

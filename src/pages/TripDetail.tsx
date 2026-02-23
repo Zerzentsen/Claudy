@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useState, useCallback } from 'react'
+import { useParams, Navigate } from 'react-router-dom'
 import type { Trip, DayPlan, Place, Expense } from '../types.ts'
 import { CURRENCIES } from '../types.ts'
 import * as storage from '../storage.ts'
@@ -20,31 +20,19 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
 
 export default function TripDetail() {
   const { tripId } = useParams<{ tripId: string }>()
-  const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('itinerary')
-  const [trip, setTrip] = useState<Trip | null>(null)
-  const [days, setDays] = useState<DayPlan[]>([])
-  const [places, setPlaces] = useState<Place[]>([])
-  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [trip] = useState<Trip | null>(() => tripId ? storage.getTrip(tripId) ?? null : null)
+  const [days, setDays] = useState<DayPlan[]>(() => tripId ? storage.getDays(tripId) : [])
+  const [places, setPlaces] = useState<Place[]>(() => tripId ? storage.getPlaces(tripId) : [])
+  const [expenses, setExpenses] = useState<Expense[]>(() => tripId ? storage.getExpenses(tripId) : [])
 
-  useEffect(() => {
-    if (!tripId) return
-    const t = storage.getTrip(tripId)
-    if (!t) {
-      navigate('/')
-      return
-    }
-    setTrip(t)
-    reload(tripId)
-  }, [tripId, navigate])
-
-  function reload(id: string) {
+  const reload = useCallback((id: string) => {
     setDays(storage.getDays(id))
     setPlaces(storage.getPlaces(id))
     setExpenses(storage.getExpenses(id))
-  }
+  }, [])
 
-  if (!trip || !tripId) return null
+  if (!trip || !tripId) return <Navigate to="/" replace />
 
   const currency = CURRENCIES.find((c) => c.code === trip.currency)
   const totalBudget = expenses.reduce((sum, e) => sum + e.amount, 0)

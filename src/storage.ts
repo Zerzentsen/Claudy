@@ -124,14 +124,56 @@ export function exportTripData(tripId: string) {
   }
 }
 
-export function importTripData(data: {
-  trip: Trip
-  days: DayPlan[]
-  places: Place[]
-  expenses: Expense[]
-}): void {
-  saveTrip(data.trip)
-  data.days.forEach(saveDay)
-  data.places.forEach(savePlace)
-  data.expenses.forEach(saveExpense)
+function validateImportData(data: unknown): { valid: true; data: { trip: Trip; days: DayPlan[]; places: Place[]; expenses: Expense[] } } | { valid: false; error: string } {
+  if (!data || typeof data !== 'object') {
+    return { valid: false, error: 'Le fichier ne contient pas de données valides' }
+  }
+
+  const d = data as Record<string, unknown>
+
+  if (!d.trip || typeof d.trip !== 'object') {
+    return { valid: false, error: 'Données de voyage manquantes' }
+  }
+
+  const trip = d.trip as Record<string, unknown>
+  if (!trip.id || !trip.name || !trip.startDate || !trip.endDate) {
+    return { valid: false, error: 'Le voyage est incomplet (id, nom ou dates manquants)' }
+  }
+
+  if (!Array.isArray(d.days)) {
+    return { valid: false, error: 'Les données des jours sont invalides' }
+  }
+
+  if (!Array.isArray(d.places)) {
+    return { valid: false, error: 'Les données des lieux sont invalides' }
+  }
+
+  if (!Array.isArray(d.expenses)) {
+    return { valid: false, error: 'Les données des dépenses sont invalides' }
+  }
+
+  return {
+    valid: true,
+    data: {
+      trip: d.trip as Trip,
+      days: d.days as DayPlan[],
+      places: d.places as Place[],
+      expenses: d.expenses as Expense[],
+    },
+  }
+}
+
+export function importTripData(data: unknown): { success: true } | { success: false; error: string } {
+  const result = validateImportData(data)
+  if (!result.valid) {
+    return { success: false, error: result.error }
+  }
+
+  const { trip, days, places, expenses } = result.data
+  saveTrip(trip)
+  days.forEach(saveDay)
+  places.forEach(savePlace)
+  expenses.forEach(saveExpense)
+
+  return { success: true }
 }
