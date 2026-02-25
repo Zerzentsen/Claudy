@@ -1,0 +1,14 @@
+# MCP config (contient des secrets)
+.mcp.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Environment
+.env
+.env.local
