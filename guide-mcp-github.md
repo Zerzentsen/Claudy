@@ -34,9 +34,26 @@ Ajouter dans votre fichier de config Claude Desktop :
 }
 ```
 
+### Configuration Claude Code (.mcp.json)
+
+Creer un fichier `.mcp.json` a la racine du projet :
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    }
+  }
+}
+```
+
+> **Ne commitez jamais votre `.mcp.json` !** Ajoutez-le a votre `.gitignore`.
+
 ### Premiere connexion
 
-1. Redemarrer Claude Desktop
+1. Redemarrer Claude Desktop / relancer Claude Code
 2. Une fenetre de navigateur s'ouvre pour vous connecter a GitHub
 3. Autorisez l'acces
 4. C'est pret !
