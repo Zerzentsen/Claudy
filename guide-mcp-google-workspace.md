@@ -123,10 +123,13 @@ Ouvrir le fichier de configuration de Claude Desktop :
 - **Windows** : `%APPDATA%\Claude\claude_desktop_config.json`
 - **Linux** : `~/.config/Claude/claude_desktop_config.json`
 
-Ajouter :
+Ajouter la section `mcpServers` dans le fichier. Si le fichier contient deja d'autres sections (comme `preferences`), ajoutez une **virgule** apres la section existante, puis `mcpServers` au meme niveau :
 
 ```json
 {
+  "preferences": {
+    "...vos preferences existantes..."
+  },
   "mcpServers": {
     "google_workspace": {
       "command": "uvx",
@@ -140,6 +143,8 @@ Ajouter :
   }
 }
 ```
+
+> **Attention au JSON** : chaque section doit etre separee par une virgule. Utilisez [jsonlint.com](https://jsonlint.com/) pour verifier la syntaxe si Claude Desktop refuse de demarrer.
 
 > **Note Windows** : le nom de l'executable peut etre `google-workspace-worker.exe` au lieu de `google-workspace-worker`.
 
@@ -238,6 +243,7 @@ Si vous ne voulez que Docs, Sheets et Drive :
 | "Server disconnected" dans Claude Desktop | L'executable s'appelle `google-workspace-worker`, pas `google-workspace-mcp`. Utilisez `"args": ["--from", "google-workspace-mcp", "google-workspace-worker"]` |
 | "No executable found" avec uvx | Lancez `uvx --from google-workspace-mcp google-workspace-worker` manuellement pour voir l'erreur. Sur Windows, ajoutez `.exe` au nom |
 | "Module not found" | Lancez `uvx google-workspace-mcp` manuellement pour voir l'erreur |
+| Erreur JSON "Expected ':'" au demarrage | Votre `claude_desktop_config.json` a une erreur de syntaxe. Verifiez les virgules entre sections et collez le contenu dans [jsonlint.com](https://jsonlint.com/) |
 
 ---
 
