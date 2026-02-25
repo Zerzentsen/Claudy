@@ -80,7 +80,34 @@ Aller dans **APIs et services** > **Bibliotheque** et activer les APIs suivantes
 
 ---
 
-## Etape 5 : Configurer le serveur MCP
+## Etape 5 : Obtenir le Refresh Token
+
+Le serveur MCP a besoin d'un **refresh token** pour acceder a votre compte Google. Voici comment l'obtenir via le **Google OAuth Playground** :
+
+1. Aller sur [OAuth 2.0 Playground](https://developers.google.com/oauthplayground)
+2. Cliquer sur l'engrenage **Settings** (en haut a droite)
+3. Cocher **"Use your own OAuth credentials"**
+4. Entrer votre **Client ID** et **Client Secret** (ceux de l'etape 4)
+5. Dans **Step 1** (panneau de gauche), selectionner les scopes des APIs que vous avez activees :
+
+| Service | Scope a selectionner |
+|---------|---------------------|
+| Google Drive API v3 | `https://www.googleapis.com/auth/drive` |
+| Google Docs API v1 | `https://www.googleapis.com/auth/documents` |
+| Google Sheets API v4 | `https://www.googleapis.com/auth/spreadsheets` |
+| Google Slides API v1 | `https://www.googleapis.com/auth/presentations` |
+| Gmail API v1 | `https://mail.google.com/` |
+| Google Calendar API v3 | `https://www.googleapis.com/auth/calendar` |
+
+6. Cliquer **"Authorize APIs"** → se connecter avec votre compte Google → autoriser
+7. Dans **Step 2**, cliquer **"Exchange authorization code for tokens"**
+8. **Copier le Refresh token** affiche (il commence par `1//`)
+
+> Selectionnez uniquement les scopes des APIs que vous avez activees a l'etape 2.
+
+---
+
+## Etape 6 : Configurer le serveur MCP
 
 ### Option A : Claude Desktop
 
@@ -100,7 +127,8 @@ Ajouter :
       "args": ["--from", "google-workspace-mcp", "google-workspace-worker"],
       "env": {
         "GOOGLE_WORKSPACE_CLIENT_ID": "VOTRE_CLIENT_ID.apps.googleusercontent.com",
-        "GOOGLE_WORKSPACE_CLIENT_SECRET": "VOTRE_CLIENT_SECRET"
+        "GOOGLE_WORKSPACE_CLIENT_SECRET": "VOTRE_CLIENT_SECRET",
+        "GOOGLE_WORKSPACE_REFRESH_TOKEN": "1//VOTRE_REFRESH_TOKEN"
       }
     }
   }
@@ -121,7 +149,8 @@ Creer un fichier `.mcp.json` :
       "args": ["--from", "google-workspace-mcp", "google-workspace-worker"],
       "env": {
         "GOOGLE_WORKSPACE_CLIENT_ID": "VOTRE_CLIENT_ID.apps.googleusercontent.com",
-        "GOOGLE_WORKSPACE_CLIENT_SECRET": "VOTRE_CLIENT_SECRET"
+        "GOOGLE_WORKSPACE_CLIENT_SECRET": "VOTRE_CLIENT_SECRET",
+        "GOOGLE_WORKSPACE_REFRESH_TOKEN": "1//VOTRE_REFRESH_TOKEN"
       }
     }
   }
@@ -132,17 +161,15 @@ Creer un fichier `.mcp.json` :
 
 ---
 
-## Etape 6 : Premiere connexion
+## Etape 7 : Premiere connexion
 
 1. Redemarrer Claude Desktop (ou relancer Claude Code)
-2. La premiere fois, une fenetre de navigateur s'ouvre
-3. Connectez-vous avec votre compte Google
-4. Autorisez l'acces aux services demandes
-5. Le token est sauvegarde localement — pas besoin de recommencer a chaque fois
+2. Le serveur MCP Google Workspace devrait apparaitre comme connecte
+3. Testez avec un des prompts ci-dessous
 
 ---
 
-## Etape 7 : Tester
+## Etape 8 : Tester
 
 Exemples de prompts a essayer :
 
@@ -198,6 +225,7 @@ Si vous ne voulez que Docs, Sheets et Drive :
 |----------|----------|
 | Token expire tous les 7 jours | Normal en mode "Test". Publiez l'app OAuth pour des tokens permanents |
 | "GOOGLE_WORKSPACE_CLIENT_ID n'est pas configure" | Verifiez que les variables d'env s'appellent bien `GOOGLE_WORKSPACE_CLIENT_ID` et `GOOGLE_WORKSPACE_CLIENT_SECRET` (pas `GOOGLE_OAUTH_...`) |
+| "GOOGLE_WORKSPACE_REFRESH_TOKEN is required" | Vous devez generer un refresh token via le [OAuth Playground](https://developers.google.com/oauthplayground) (voir etape 5) et l'ajouter dans `env` |
 | "Access denied" sur un service | Verifiez que l'API est activee dans Google Cloud Console |
 | Erreur OAuth "redirect_uri_mismatch" | Assurez-vous d'avoir choisi "Application de bureau" comme type |
 | Le serveur ne demarre pas | Verifiez que `uv` est installe : `uv --version` |
