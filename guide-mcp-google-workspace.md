@@ -97,7 +97,7 @@ Ajouter :
   "mcpServers": {
     "google_workspace": {
       "command": "uvx",
-      "args": ["google-workspace-mcp"],
+      "args": ["--from", "google-workspace-mcp", "google-workspace-worker"],
       "env": {
         "GOOGLE_OAUTH_CLIENT_ID": "VOTRE_CLIENT_ID.apps.googleusercontent.com",
         "GOOGLE_OAUTH_CLIENT_SECRET": "VOTRE_CLIENT_SECRET"
@@ -106,6 +106,8 @@ Ajouter :
   }
 }
 ```
+
+> **Note Windows** : le nom de l'executable peut etre `google-workspace-worker.exe` au lieu de `google-workspace-worker`.
 
 ### Option B : Claude Code (fichier .mcp.json a la racine du projet)
 
@@ -116,7 +118,7 @@ Creer un fichier `.mcp.json` :
   "mcpServers": {
     "google_workspace": {
       "command": "uvx",
-      "args": ["google-workspace-mcp"],
+      "args": ["--from", "google-workspace-mcp", "google-workspace-worker"],
       "env": {
         "GOOGLE_OAUTH_CLIENT_ID": "VOTRE_CLIENT_ID.apps.googleusercontent.com",
         "GOOGLE_OAUTH_CLIENT_SECRET": "VOTRE_CLIENT_SECRET"
@@ -198,6 +200,8 @@ Si vous ne voulez que Docs, Sheets et Drive :
 | "Access denied" sur un service | Verifiez que l'API est activee dans Google Cloud Console |
 | Erreur OAuth "redirect_uri_mismatch" | Assurez-vous d'avoir choisi "Application de bureau" comme type |
 | Le serveur ne demarre pas | Verifiez que `uv` est installe : `uv --version` |
+| "Server disconnected" dans Claude Desktop | L'executable s'appelle `google-workspace-worker`, pas `google-workspace-mcp`. Utilisez `"args": ["--from", "google-workspace-mcp", "google-workspace-worker"]` |
+| "No executable found" avec uvx | Lancez `uvx --from google-workspace-mcp google-workspace-worker` manuellement pour voir l'erreur. Sur Windows, ajoutez `.exe` au nom |
 | "Module not found" | Lancez `uvx google-workspace-mcp` manuellement pour voir l'erreur |
 
 ---

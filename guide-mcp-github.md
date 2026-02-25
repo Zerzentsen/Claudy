@@ -69,6 +69,8 @@ Utile si vous voulez un controle total ou si le mode remote n'est pas disponible
 
 #### Claude Desktop
 
+> **Windows** : remplacez `"docker"` par le chemin complet `"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe"` si Docker n'est pas dans votre PATH.
+
 ```json
 {
   "mcpServers": {
@@ -228,7 +230,7 @@ Le header `X-MCP-Toolsets: repos,issues` peut etre configure selon le client.
 
 | Probleme | Solution |
 |----------|----------|
-| "Docker not found" | Installez Docker Desktop et assurez-vous qu'il tourne |
+| "Docker not found" | Installez Docker Desktop et assurez-vous qu'il tourne. Sur Windows, utilisez le chemin complet : `C:\Program Files\Docker\Docker\resources\bin\docker.exe` comme commande |
 | "401 Unauthorized" | Verifiez votre token PAT et ses permissions |
 | "Rate limit exceeded" | L'API GitHub a des limites. Attendez ou utilisez un token avec plus de quota |
 | Pas d'acces a un repo d'organisation | Activez le SSO pour votre token si l'org utilise SAML |
