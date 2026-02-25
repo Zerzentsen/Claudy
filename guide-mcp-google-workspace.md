@@ -73,10 +73,16 @@ Aller dans **APIs et services** > **Bibliotheque** et activer les APIs suivantes
 
 1. Aller dans **APIs et services** > **Identifiants**
 2. Cliquer **+ Creer des identifiants** > **ID client OAuth**
-3. Type d'application : **Application de bureau**
-4. Nom : `MCP Desktop Client`
-5. Cliquer **Creer**
-6. **Copier** le **Client ID** et le **Client Secret** (vous en aurez besoin juste apres)
+3. Type d'application : **Application Web**
+4. Nom : `MCP Workspace Client`
+5. Dans **URI de redirection autorises**, ajouter :
+   ```
+   https://developers.google.com/oauthplayground
+   ```
+6. Cliquer **Creer**
+7. **Copier** le **Client ID** et le **Client Secret** (vous en aurez besoin juste apres)
+
+> **Important** : le type doit etre **Application Web** (pas "Application de bureau"), sinon le OAuth Playground ne fonctionnera pas a l'etape suivante.
 
 ---
 
@@ -227,7 +233,7 @@ Si vous ne voulez que Docs, Sheets et Drive :
 | "GOOGLE_WORKSPACE_CLIENT_ID n'est pas configure" | Verifiez que les variables d'env s'appellent bien `GOOGLE_WORKSPACE_CLIENT_ID` et `GOOGLE_WORKSPACE_CLIENT_SECRET` (pas `GOOGLE_OAUTH_...`) |
 | "GOOGLE_WORKSPACE_REFRESH_TOKEN is required" | Vous devez generer un refresh token via le [OAuth Playground](https://developers.google.com/oauthplayground) (voir etape 5) et l'ajouter dans `env` |
 | "Access denied" sur un service | Verifiez que l'API est activee dans Google Cloud Console |
-| Erreur OAuth "redirect_uri_mismatch" | Assurez-vous d'avoir choisi "Application de bureau" comme type |
+| Erreur OAuth "redirect_uri_mismatch" | Votre client OAuth doit etre de type **Application Web** avec `https://developers.google.com/oauthplayground` dans les URI de redirection autorises |
 | Le serveur ne demarre pas | Verifiez que `uv` est installe : `uv --version` |
 | "Server disconnected" dans Claude Desktop | L'executable s'appelle `google-workspace-worker`, pas `google-workspace-mcp`. Utilisez `"args": ["--from", "google-workspace-mcp", "google-workspace-worker"]` |
 | "No executable found" avec uvx | Lancez `uvx --from google-workspace-mcp google-workspace-worker` manuellement pour voir l'erreur. Sur Windows, ajoutez `.exe` au nom |
