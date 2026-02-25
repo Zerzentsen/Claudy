@@ -5,8 +5,8 @@
       "command": "uvx",
       "args": ["--from", "google-workspace-mcp", "google-workspace-worker"],
       "env": {
-        "GOOGLE_OAUTH_CLIENT_ID": "REMPLACER_PAR_VOTRE_CLIENT_ID.apps.googleusercontent.com",
-        "GOOGLE_OAUTH_CLIENT_SECRET": "REMPLACER_PAR_VOTRE_CLIENT_SECRET"
+        "GOOGLE_WORKSPACE_CLIENT_ID": "REMPLACER_PAR_VOTRE_CLIENT_ID.apps.googleusercontent.com",
+        "GOOGLE_WORKSPACE_CLIENT_SECRET": "REMPLACER_PAR_VOTRE_CLIENT_SECRET"
       }
     },
 

@@ -99,8 +99,8 @@ Ajouter :
       "command": "uvx",
       "args": ["--from", "google-workspace-mcp", "google-workspace-worker"],
       "env": {
-        "GOOGLE_OAUTH_CLIENT_ID": "VOTRE_CLIENT_ID.apps.googleusercontent.com",
-        "GOOGLE_OAUTH_CLIENT_SECRET": "VOTRE_CLIENT_SECRET"
+        "GOOGLE_WORKSPACE_CLIENT_ID": "VOTRE_CLIENT_ID.apps.googleusercontent.com",
+        "GOOGLE_WORKSPACE_CLIENT_SECRET": "VOTRE_CLIENT_SECRET"
       }
     }
   }
@@ -120,8 +120,8 @@ Creer un fichier `.mcp.json` :
       "command": "uvx",
       "args": ["--from", "google-workspace-mcp", "google-workspace-worker"],
       "env": {
-        "GOOGLE_OAUTH_CLIENT_ID": "VOTRE_CLIENT_ID.apps.googleusercontent.com",
-        "GOOGLE_OAUTH_CLIENT_SECRET": "VOTRE_CLIENT_SECRET"
+        "GOOGLE_WORKSPACE_CLIENT_ID": "VOTRE_CLIENT_ID.apps.googleusercontent.com",
+        "GOOGLE_WORKSPACE_CLIENT_SECRET": "VOTRE_CLIENT_SECRET"
       }
     }
   }
@@ -197,6 +197,7 @@ Si vous ne voulez que Docs, Sheets et Drive :
 | Probleme | Solution |
 |----------|----------|
 | Token expire tous les 7 jours | Normal en mode "Test". Publiez l'app OAuth pour des tokens permanents |
+| "GOOGLE_WORKSPACE_CLIENT_ID n'est pas configure" | Verifiez que les variables d'env s'appellent bien `GOOGLE_WORKSPACE_CLIENT_ID` et `GOOGLE_WORKSPACE_CLIENT_SECRET` (pas `GOOGLE_OAUTH_...`) |
 | "Access denied" sur un service | Verifiez que l'API est activee dans Google Cloud Console |
 | Erreur OAuth "redirect_uri_mismatch" | Assurez-vous d'avoir choisi "Application de bureau" comme type |
 | Le serveur ne demarre pas | Verifiez que `uv` est installe : `uv --version` |
